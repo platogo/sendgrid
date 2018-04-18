@@ -10,7 +10,8 @@ module SendGrid
     :subscriptiontrack,
     :footer,
     :spamcheck,
-    :bypass_list_management
+    :bypass_list_management,
+    :ip_pool
   ]
 
   VALID_GANALYTICS_OPTIONS = [
@@ -25,10 +26,10 @@ module SendGrid
     base.class_eval do
       class << self
         attr_accessor :default_sg_category, :default_sg_options, :default_subscriptiontrack_text,
-                      :default_footer_text, :default_spamcheck_score, :default_sg_unique_args
+                      :default_footer_text, :default_spamcheck_score, :default_sg_unique_args, :default_sg_ip_pool
       end
       attr_accessor :sg_category, :sg_options, :sg_disabled_options, :sg_recipients, :sg_substitutions,
-                    :subscriptiontrack_text, :footer_text, :spamcheck_score, :sg_unique_args, :sg_send_at
+                    :subscriptiontrack_text, :footer_text, :spamcheck_score, :sg_unique_args, :sg_send_at, :sg_ip_pool
     end
 
     # NOTE: This commented-out approach may be a "safer" option for Rails 3, but it
@@ -50,6 +51,11 @@ module SendGrid
     # mailer method.
     def sendgrid_category(category)
       self.default_sg_category = category
+    end
+
+    # Sets a default ip_pool for all emails.
+    def sendgrid_ip_pool(ip_pool)
+      self.default_sg_ip_pool = ip_pool
     end
 
     # Enables a default option for all emails.
@@ -101,6 +107,11 @@ module SendGrid
   # Call within mailer method to override the default value.
   def sendgrid_category(category)
     @sg_category = category
+  end
+  
+  # Call within mailer method to set a dedicated ip pool
+  def sendgrid_ip_pool(ip_pool)
+    @sg_ip_pool = ip_pool
   end
 
   # Call within mailer method to set send time for this mail
@@ -224,6 +235,14 @@ module SendGrid
       header_opts[:category] = mail.subject
     elsif self.class.default_sg_category
       header_opts[:category] = self.class.default_sg_category
+    end
+
+    # Set IP pool
+
+    if @sg_ip_pool
+      header_opts[:ip_pool] = @sg_ip_pool
+    elsif self.class.default_sg_ip_pool
+      header_opts[:ip_pool] = self.class.default_sg_ip_pool
     end
 
     #Set send_at if set by the user
